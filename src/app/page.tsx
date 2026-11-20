@@ -1,70 +1,106 @@
-import Image from "next/image";
+/*
+ * @Author: qinhao 447519276@qq.com
+ * @Date: 2026-11-18 14:54:20
+ * @LastEditors: qinhao 447519276@qq.com
+ * @LastEditTime: 2026-11-20 16:44:55
+ * @FilePath: \service-agent\src\app\page.tsx
+ * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
+ */
+import { Suspense } from "react";
+import { refresh } from "next/cache";
+import { connection } from "next/server";
 
+type ChatMessage = {
+    id: string;
+    role: "user" | "assistant";
+    content: string;
+};
+
+const history: ChatMessage[] = [
+    { id: "1", role: "user", content: "你好" },
+    { id: "2", role: "assistant", content: "你好，有什么可以帮你的吗？" },
+];
 export default function Home() {
     return (
-        <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-            <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-                <Image
-                    className="dark:invert h-5 w-[100px]"
-                    src="/next.svg"
-                    alt="Next.js logo"
-                    width={100}
-                    height={20}
-                    priority
+        <div className="flex h-full flex-col">
+            <div className="min-h-0 flex-3 overflow-y-auto border-b border-gray-900">
+                <Suspense
+                    fallback={
+                        <p className="px-4 py-6 text-center text-sm text-neutral-500">
+                            正在读取聊天记录…
+                        </p>
+                    }
+                >
+                    <ChatHistory />
+                </Suspense>
+            </div>
+            <div className="flex-1">
+                <ChatInput />
+            </div>
+        </div>
+    );
+}
+
+async function ChatHistory() {
+    await connection();
+
+    if (history.length === 0) {
+        return (
+            <p className="px-4 py-6 text-center text-sm text-neutral-500">
+                还没有聊天记录
+            </p>
+        );
+    }
+
+    return (
+        <ul className="mx-auto flex w-full max-w-3xl flex-col gap-3 px-4 py-6">
+            {history.map((message) => (
+                <li
+                    key={message.id}
+                    className={
+                        message.role === "user"
+                            ? "ml-auto max-w-[80%] rounded-2xl bg-neutral-900 px-4 py-2 whitespace-pre-wrap text-white"
+                            : "mr-auto max-w-[80%] rounded-2xl bg-neutral-100 px-4 py-2 whitespace-pre-wrap text-neutral-900"
+                    }
+                >
+                    {message.content}
+                </li>
+            ))}
+        </ul>
+    );
+}
+
+async function sendMessage(formData: FormData) {
+    "use server";
+    const message = formData.get("message");
+    if (typeof message !== "string") return;
+
+    const content = message.trim();
+    if (!content) return;
+
+    history.push({ id: crypto.randomUUID(), role: "user", content });
+    refresh();
+}
+async function ChatInput() {
+    return (
+        <div>
+            <form
+                action={sendMessage}
+                className="flex items-center gap-2 px-4 py-3"
+            >
+                <input
+                    type="text"
+                    name="message"
+                    className="flex-1 rounded-md border border-neutral-300 bg-transparent px-3 py-2 text-foreground placeholder:text-neutral-500 dark:border-neutral-700"
+                    placeholder="输入你的问题"
                 />
-                <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-                    <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-                        To get started, edit the{" "}
-                        <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-                            page.tsx
-                        </code>{" "}
-                        file.
-                    </h1>
-                    <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-                        Looking for a starting point or more instructions? Head
-                        over to{" "}
-                        <a
-                            href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-                            className="font-medium text-zinc-950 dark:text-zinc-50"
-                        >
-                            Templates
-                        </a>{" "}
-                        or the{" "}
-                        <a
-                            href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-                            className="font-medium text-zinc-950 dark:text-zinc-50"
-                        >
-                            Learning
-                        </a>{" "}
-                        center.
-                    </p>
-                </div>
-                <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-                    <a
-                        className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-                        href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                    >
-                        <Image
-                            className="dark:invert h-[14px] w-4"
-                            src="/vercel.svg"
-                            alt="Vercel logomark"
-                            width={16}
-                            height={14}
-                        />
-                        Deploy Now
-                    </a>
-                    <a
-                        className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-                        href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                    >
-                        Documentation
-                    </a>
-                </div>
-            </main>
+                <button
+                    type="submit"
+                    className="rounded-md bg-neutral-900 px-3 py-2 text-white"
+                >
+                    发送
+                </button>
+            </form>
         </div>
     );
 }
